@@ -430,14 +430,14 @@ void idleControl()
         IDLE_PIN_HIGH();
         idleOn = true;
         BIT_SET(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
-		    currentStatus.idleLoad = 100;
+        currentStatus.idleLoad = 100;
       }
       else if (idleOn)
       {
         IDLE_PIN_LOW();
         idleOn = false; 
         BIT_CLEAR(currentStatus.spark, BIT_SPARK_IDLE); //Turn the idle control flag on
-		    currentStatus.idleLoad = 0;
+        currentStatus.idleLoad = 0;
       }
       break;
 
@@ -522,7 +522,8 @@ void idleControl()
       //No cranking specific value for closed loop (yet?)
       if( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) )
       {
-        //Currently cranking. Use the cranking table
+        //Currently cranking. Reset idle taper counter. Use the cranking table
+        idleTaper = 0;
         currentStatus.idleLoad = table2D_getValue(&iacCrankDutyTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET); //All temps are offset by 40 degrees
         idle_pwm_target_value = percentage(currentStatus.idleLoad, idle_pwm_max_count);
         idle_pid_target_value = idle_pwm_target_value << 2; //Resolution increased
@@ -541,7 +542,7 @@ void idleControl()
       {
         //Read the OL table as feedforward term
         FeedForwardTerm = percentage(table2D_getValue(&iacPWMTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET), idle_pwm_max_count<<2); //All temps are offset by 40 degrees
-    
+        if( idleTaper < configPage2.idleTaperTime && (BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN))) { idleTaper++; }
         idle_cl_target_rpm = (uint16_t)currentStatus.CLIdleTarget * 10; //Multiply the byte target value back out by 10
         if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ) ) { idlePID.SetTunings(configPage6.idleKP, configPage6.idleKI, configPage6.idleKD); } //Re-read the PID settings once per second
         if((currentStatus.RPM - idle_cl_target_rpm > configPage2.iacRPMlimitHysteresis*10) || (currentStatus.TPS > configPage2.iacTPSlimit)){ //reset integral to zero when TPS is bigger than set value in TS (opening throttle so not idle anymore). OR when RPM higher than Idle Target + RPM Histeresis (comming back from high rpm with throttle closed) 

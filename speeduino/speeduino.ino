@@ -342,7 +342,17 @@ void loop()
       //Lookup the current target idle RPM. This is aligned with coolant and so needs to be calculated at the same rate CLT is read
       if( (configPage2.idleAdvEnabled >= 1) || (configPage6.iacAlgorithm != IAC_ALGORITHM_NONE) )
       {
+        if( idleTaper < configPage2.idleTaperTime && configPage6.iacAlgorithm == IAC_ALGORITHM_PWM_OLCL )
+        {
+          //Taper from start RPM target to actual target setpoint in idle target table map
+          currentStatus.CLIdleTarget = (byte)map(idleTaper, 0, configPage2.idleTaperTime,\
+          (long)configPage10.startRPMTarget*10,\
+          (long)table2D_getValue(&idleTargetTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET));
+        }
+        else
+        {
         currentStatus.CLIdleTarget = (byte)table2D_getValue(&idleTargetTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET); //All temps are offset by 40 degrees
+        }
       }
 
       #ifdef SD_LOGGING
